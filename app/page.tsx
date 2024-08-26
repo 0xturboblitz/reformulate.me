@@ -36,10 +36,10 @@ export default function Home() {
   const [outputs, setOutputs] = useState<Output[]>([]);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [apiKeys, setApiKeys] = useState<ApiKeys>(() => ({
-    GPT: process.env.NEXT_PUBLIC_GPT_API_KEY || '',
-    Claude: process.env.NEXT_PUBLIC_CLAUDE_API_KEY || '',
-    LLaMA: process.env.NEXT_PUBLIC_LLAMA_API_KEY || '',
-    Mixtral: process.env.NEXT_PUBLIC_MIXTRAL_API_KEY || ''
+    GPT: '',
+    Claude: '',
+    LLaMA: '',
+    Mixtral: ''
   }));
   const [apiKeyVisibility, setApiKeyVisibility] = useState<{ [key in Model]: boolean }>({
     GPT: false,
@@ -47,9 +47,12 @@ export default function Home() {
     LLaMA: false,
     Mixtral: false
   });
-  const [selectedModels, setSelectedModels] = useState<SelectedModels>(
-    models.reduce((acc, model) => ({ ...acc, [model]: true }), {} as SelectedModels)
-  );
+  const [selectedModels, setSelectedModels] = useState<SelectedModels>({
+    'GPT': true,
+    'Claude': true,
+    'LLaMA': false,
+    'Mixtral': false
+  });
   const [outputsPerModel, setOutputsPerModel] = useState(3);
   const [isCrazyMode, setIsCrazyMode] = useState(false);
   const [sourceLanguage, setSourceLanguage] = useState('');
@@ -65,26 +68,28 @@ export default function Home() {
     if (sourceLanguage) {
       basePrompt = `Translate the following ${sourceLanguage} text to English, then ${basePrompt.toLowerCase()}`;
     }
-    return isCrazyMode ? basePrompt.replace(": '{input}'", " in a crazier way: '{input}'") : basePrompt;
-  }, [prompts, isCrazyMode, sourceLanguage]);
+    if (isCrazyMode) {
+      basePrompt = basePrompt.replace(": '{input}'", " in a crazier way: '{input}'");
+    }
+
+    return basePrompt.replace('{input}', input).replace('{count}', outputsPerModel.toString());
+  }, [prompts, isCrazyMode, sourceLanguage, input]);
 
   const handleFetchReformulations = useCallback(async () => {
     if (input) {
       setOutputs(
         Object.keys(selectedModels)
-          .filter(model => selectedModels[model as Model] && apiKeys[model as Model])
+          .filter(model => selectedModels[model as Model])
           .flatMap((model: any) => (new Array(outputsPerModel).fill({ model, text: '', isLoading: true })))
       );
 
       await Promise.all(
         models.map(async (model) => {
-          if (selectedModels[model] && apiKeys[model]) {
+          if (selectedModels[model]) {
             try {
               const modelOutputs = await fetchReformulations(
-                input,
                 model,
                 apiKeys,
-                outputsPerModel,
                 getPrompt(model)
               );
               setOutputs(prevOutputs => {
@@ -116,7 +121,7 @@ export default function Home() {
     return () => clearTimeout(timer);
   }, [input, handleFetchReformulations]);
 
-  const handleApiKeyChange = (model: string, key: string) => {
+  const handleApiKeyChange = (model: Model, key: string) => {
     setApiKeys(prev => ({ ...prev, [model]: key }));
   };
 
@@ -176,7 +181,7 @@ export default function Home() {
           </DialogHeader>
           <ScrollArea className="h-[80vh] pr-4">
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold">API Keys</h3>
+              <h3 className="text-lg font-semibold">API Keys (Optional)</h3>
               {models.map(model => (
                 <div key={model} className="flex items-center space-x-2">
                   <Label htmlFor={`${model}-api-key`} className="w-20">{model}</Label>
@@ -186,7 +191,7 @@ export default function Home() {
                       type={apiKeyVisibility[model] ? "text" : "password"}
                       value={apiKeys[model] || ''}
                       onChange={(e) => handleApiKeyChange(model, e.target.value)}
-                      placeholder={`Enter ${model} API Key`}
+                      placeholder={`Enter ${model} API Key (optional)`}
                       className="pr-10"
                     />
                     <Button
