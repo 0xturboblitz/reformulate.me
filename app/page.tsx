@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Settings, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +13,7 @@ import { models, Model, ApiKeys, SelectedModels, Output, fetchReformulations } f
 import { LoadingSpinner } from '@/components/ui/spinner';
 
 export default function Home() {
+  const inputRef = useRef<HTMLInputElement>(null);
   const [input, setInput] = useState('');
   const [outputs, setOutputs] = useState<Output[]>([]);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -102,6 +103,13 @@ export default function Home() {
     return () => clearTimeout(timer);
   }, [input, handleFetchReformulations]);
 
+  useEffect(() => {
+    // Focus the input field when component mounts
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, []);
+
   const handleApiKeyChange = (model: Model, key: string) => {
     setApiKeys(prev => ({ ...prev, [model]: key }));
   };
@@ -124,6 +132,7 @@ export default function Home() {
     <div className="container mx-auto p-4">
       <div className="mb-4">
         <Input
+          ref={inputRef}
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
