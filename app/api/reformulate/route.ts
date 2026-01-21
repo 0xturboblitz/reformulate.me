@@ -28,16 +28,18 @@ const callClaudeAPI = async (prompt: string, apiKey: string): Promise<string> =>
     headers: {
       'Content-Type': 'application/json',
       'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01'
+      'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify({
-      model: "claude-3-opus-20240229",
+      model: "claude-sonnet-4-5-20250929",
       max_tokens: 1024,
       messages: [{ role: "user", content: prompt }],
-      temperature: 0.7,
     })
   });
   const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error?.message || 'Claude API error');
+  }
   return data.content[0].text;
 };
 
